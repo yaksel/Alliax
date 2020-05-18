@@ -15,7 +15,9 @@ import com.alliax.portalclientes.domain.Material;
 import com.alliax.portalclientes.domain.PedidoPartidasPK;
 import com.alliax.portalclientes.model.ClasePedido;
 import com.alliax.portalclientes.model.DestinatarioMercancia;
+import com.alliax.portalclientes.model.Item;
 import com.alliax.portalclientes.model.MetodoPagoCFDI;
+import com.alliax.portalclientes.model.OrdenVenta;
 import com.alliax.portalclientes.model.Pedido;
 import com.alliax.portalclientes.model.PedidoMaterial;
 import com.alliax.portalclientes.model.PedidoPartidas;
@@ -33,7 +35,10 @@ import org.apache.log4j.Logger;
 
 import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
+import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.ViewScoped;
+
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -43,6 +48,9 @@ import java.util.List;
 public class CrearPedido_backing extends AbstractBackingGen {
 
     private final static Logger logger = Logger.getLogger(CrearPedido_backing.class);
+    
+    @ManagedProperty("#{listaPedidos}")
+	private ListadoPedidos_backing listadoPedidos_backing;
 
     BuscarDestinatariosMercanciasRFC buscarDestinatariosMercanciasRFC;
     BuscarClasePedidoRFC buscarClasePedidoRFC;
@@ -106,9 +114,37 @@ public class CrearPedido_backing extends AbstractBackingGen {
     private String descripcionDestinatario;
 
     private String skuMaterialEliminado;
+    
+    private boolean update = false;
+    private boolean flagClonar = false;
+    private OrdenVenta pedidoAClonar;
+    
 
+    public ListadoPedidos_backing getListadoPedidos_backing() {
+		return listadoPedidos_backing;
+	}
 
-    public String getIdPedido() {
+	public void setListadoPedidos_backing(ListadoPedidos_backing listadoPedidos_backing) {
+		this.listadoPedidos_backing = listadoPedidos_backing;
+	}
+
+	public boolean isUpdate() {
+		return update;
+	}
+
+	public void setUpdate(boolean update) {
+		this.update = update;
+	}
+
+	public boolean isFlagClonar() {
+		return flagClonar;
+	}
+
+	public void setFlagClonar(boolean flagClonar) {
+		this.flagClonar = flagClonar;
+	}
+
+	public String getIdPedido() {
         return idPedido;
     }
 
@@ -346,15 +382,32 @@ public class CrearPedido_backing extends AbstractBackingGen {
 
     public List<DestinatarioMercancia> getDestinatarioMercancias() {
         if (destinatarioMercancias == null){
+        	List<DestinatarioMercancia> aux = new ArrayList<DestinatarioMercancia>();
+        	if(flagClonar) {
+            	DestinatarioMercancia dest = new DestinatarioMercancia();
+    	    	dest.setNoDestinatario(pedidoAClonar.getDestinatario());
+    	    	String[] completeDestinatario = pedidoAClonar.getDestinatario().split("/");
+    	    	try {
+    	    		dest.setNombreSucursal(completeDestinatario[0]);
+    	    	}catch (Exception e) {}
+    	    	try {
+    	    		dest.setCalleNumero(completeDestinatario[1]);
+    	    	}catch (Exception e) {}
+    	    	try {
+    	    		dest.setColonia(completeDestinatario[2]);
+    	    	}catch (Exception e) {}
+    	    	aux.add(dest);
+            }
             try {
                 buscarDestinatariosMercanciasRFC = this.getSpringContext().getBean("buscarDestinatariosMercanciasRFC", BuscarDestinatariosMercanciasRFC.class);
                 logger.info("RFC " + buscarDestinatariosMercanciasRFC);
-                setDestinatarioMercancias(buscarDestinatariosMercanciasRFC.buscarDestinatariosMercancias(this.getUsuarioLogueado().getNoCliente()));
+                aux.addAll(buscarDestinatariosMercanciasRFC.buscarDestinatariosMercancias(this.getUsuarioLogueado().getNoCliente()));
             } catch (Exception e) {
                 logger.error("Error al desplegar listado de pedidos " + e.getLocalizedMessage());
                 logger.error(e);
                // setDestinatarioMercancias(new BuscarDestinatariosMercanciasConfig().buscarDestinatariosMercancias(this.getUsuarioLogueado().getNoCliente()));
             }
+            setDestinatarioMercancias(aux);
         }
         return destinatarioMercancias;
     }
@@ -726,30 +779,42 @@ public class CrearPedido_backing extends AbstractBackingGen {
     public String asignaPedidoSegmento(){
         logger.info("asignaPedidoSegmento::::::" + getSegmento() );
 
+        if(flagClonar) {
+    		setMateriales(loadMaterialesClonar());
+    	}else {
+    		materiales = new ArrayList<PedidoMaterial>();
+    	}
+        
         if(getSegmento() != null){
             pedidoBd.setTipoMaterial(getSegmento());
             pedidoService.save(pedidoBd);
         }
 
         materialService = this.getSpringContext().getBean("materialService",MaterialService.class);
-
         List<Material> materialesDb = materialService.findByTipoMaterial((getSegmento().equals("10")?getSegmento():"11"));
-        materiales = new ArrayList<>();
+        List<PedidoMaterial> materialesX = new ArrayList<>();
         Material material = null;
         PedidoMaterial pedidoMaterial = null;
+        List<String> skus = new ArrayList<String>();
+        for(int i = 0; i < materiales.size() ; i++) {
+        	PedidoMaterial ped = materiales.get(i);
+        	skus.add(ped.getSku());
+        	materialesX.add(ped);
+        }
 
         for(int i = 0; i < materialesDb.size() ; i++){
             material = materialesDb.get(i);
-            pedidoMaterial = new PedidoMaterial();
-
-            pedidoMaterial.setDescripcion(material.getDescripcion()==null?"":material.getDescripcion().trim());
-            pedidoMaterial.setSku(material.getSku()==null?"":material.getSku().trim());
-            pedidoMaterial.setUnidadMedida(material.getUnidadMedida()==null?"":material.getUnidadMedida().trim());
-            pedidoMaterial.setUrlFoto(material.getUrlFoto()==null?"":material.getUrlFoto().trim());
-            materiales.add(pedidoMaterial);
+            if(!skus.contains(material.getSku())) {
+            	pedidoMaterial = new PedidoMaterial();
+                pedidoMaterial.setDescripcion(material.getDescripcion()==null?"":material.getDescripcion().trim());
+                pedidoMaterial.setSku(material.getSku()==null?"":material.getSku().trim());
+                pedidoMaterial.setUnidadMedida(material.getUnidadMedida()==null?"":material.getUnidadMedida().trim());
+                pedidoMaterial.setUrlFoto(material.getUrlFoto()==null?"":material.getUrlFoto().trim());
+                materialesX.add(pedidoMaterial);
+            }
         }
-        setMaterialesJson(materiales);
-
+        setMateriales(materialesX);
+        setMaterialesJson(getMateriales());
         return "";
     }
 
@@ -945,5 +1010,47 @@ public class CrearPedido_backing extends AbstractBackingGen {
             }
         }
         setMaterialesJson(materiales);
+    }
+    
+    public void loadPedidoData(){
+    	if(update) {
+    		flagClonar = true;
+    		update = false;
+    		pedidoAClonar = getListadoPedidos_backing().getPedido();
+	    	this.setDestinatarioMercancia(pedidoAClonar.getDestinatario());
+	    	this.setNroPedidoCliente(pedidoAClonar.getPedidoCliente());
+	    	this.setSegmento(pedidoAClonar.getSegmento());
+	    	//DestinatarioMercancia dest = new DestinatarioMercancia();
+	    	//dest.setNombreSucursal("111 Con. Suc. Periferico");//ok
+	    	//dest.setCalleNumero("Tablaje Catastral 13951"); ///ok
+	    	//dest.setColonia("97210 Merida Sin Distrito"); //ok
+	        setDescripcionDestinatario(pedidoAClonar.getDestinatario());
+	    	setMateriales(loadMaterialesClonar());
+	    	}
+    }
+    
+    public List<PedidoMaterial> loadMaterialesClonar() {
+    	List<PedidoMaterial> out = new ArrayList<PedidoMaterial>();
+    	List<Item> partidas = getListadoPedidos_backing().getPartidas();
+    	for(int i = 0;i < partidas.size(); i++ ){
+    		Item fac = partidas.get(i);
+    		PedidoMaterial material = new PedidoMaterial();
+    		
+    		material.setCantidad(fac.getCantidad()!=null?fac.getCantidad().toString():null);
+    		material.setDescripcion(fac.getDescripcion());
+    		SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy");  
+    		material.setFechaEntrega(fac.getFechaEntrega()!=null?formatter.format(fac.getFechaEntrega()):null);
+    		material.setMoneda(fac.getMoneda());
+    		material.setPrecioNeto(fac.getPrecioNeto()!=null?fac.getPrecioNeto().toString():null);
+    		material.setSku(fac.getNoMaterial());
+    		material.setUnidadMedida(fac.getUnidadMedida());
+    		material.setCodigoError("0");
+    		material.setMensajeError("");
+    		material.setMonto(fac.getMonto()!=null?fac.getMonto().toString():null);
+    		material.setUrlFoto("");
+    		material.setIva("5");
+    		out.add(material);
+    	}
+    	return out;
     }
 }
