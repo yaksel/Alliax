@@ -45,13 +45,6 @@ var crearPedido = (function () {
             $("[id='crearPedido:filterStepOne:frm_nroPedido']").val($("[id='crearPedido:filterStepOne:input_numeroPedido']").val());
 
             $("[id='crearPedido:filterStepOne:asignaDestNroPedido']").trigger('click');
-            
-            var flagClonar = $("[id='crearPedido:filterStepOne:flagClonar']").val();
-            if(flagClonar=='true'){
-            	//alert("entro boton 1");
-                $("[id='crearPedido:filterStepOne:asignaSegmento']").trigger('click');
-                $("[id='crearPedido:filterStepOne:asignaMaterial']").trigger('click');
-            }
 
         });
 
