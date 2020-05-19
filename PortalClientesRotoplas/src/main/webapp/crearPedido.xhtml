@@ -13,10 +13,6 @@
 		<ui:define name="metadata">
 		    <link href="#{resource['lookAndFeel/vendor/Datatables/Buttons-1.6.1/css/buttons.bootstrap4.min.css']}" rel="stylesheet" />
 			<link href="#{resource['lookAndFeel/vendor/Toastr/toastr.min.css']}" rel="stylesheet" />
-			<f:metadata>
-    			<f:viewParam name="update" value="#{crearPedido.update}"/>
-    			<f:event type="preRenderView" listener="#{crearPedido.loadPedidoData}"/>															
-			</f:metadata>
 		</ui:define>
 		<ui:define name="content">
 			<h:form id="crearPedido">
@@ -58,7 +54,7 @@
 															</h:panelGroup>
 														</h:panelGroup>
 														<h:panelGroup layout="block" class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
-															<h:inputText value="#{crearPedido.nroPedidoCliente}" class="form-control"
+															<h:inputText class="form-control"
 																id="input_numeroPedido" name="input_numeroPedido"
 																a:placeholder="#{lblMain.numeroPedido}" />
 															<h:inputHidden id="frm_nroPedido" name="frm_nroPedido" value="#{crearPedido.nroPedidoCliente}" />
@@ -91,7 +87,6 @@
 											<h:inputHidden id="noCotizacion" value="#{crearPedido.noCotizacion}"></h:inputHidden>
 											<h:inputHidden id="clasePedido" value="#{crearPedido.clasePedido}"></h:inputHidden>
 											<h:inputHidden id="frm_segmento" value="#{crearPedido.segmento}"/>
-											<h:inputHidden id="flagClonar" value="#{crearPedido.flagClonar}"/>
 											<h:inputHidden id="frm_materialSeleccionado" value="#{crearPedido.materialSeleccionadoJson}"/>
 											<h:inputHidden id="frm_cfdi" value="#{crearPedido.usoCFDI}"/>
 											<h:inputHidden id="frm_cfdi_desc" />
