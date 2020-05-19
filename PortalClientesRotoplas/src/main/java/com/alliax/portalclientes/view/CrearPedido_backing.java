@@ -2,6 +2,7 @@ package com.alliax.portalclientes.view;
 
 import com.alliax.portalclientes.controller.BuscarClasePedidoConfig;
 import com.alliax.portalclientes.controller.BuscarClasePedidoRFC;
+import com.alliax.portalclientes.controller.BuscarDestinatarioMercanciaPorPedidoRFC;
 import com.alliax.portalclientes.controller.BuscarDestinatariosMercanciasConfig;
 import com.alliax.portalclientes.controller.BuscarDestinatariosMercanciasRFC;
 import com.alliax.portalclientes.controller.BuscarMetodoPagoCfdiConfig;
@@ -15,7 +16,9 @@ import com.alliax.portalclientes.domain.Material;
 import com.alliax.portalclientes.domain.PedidoPartidasPK;
 import com.alliax.portalclientes.model.ClasePedido;
 import com.alliax.portalclientes.model.DestinatarioMercancia;
+import com.alliax.portalclientes.model.Item;
 import com.alliax.portalclientes.model.MetodoPagoCFDI;
+import com.alliax.portalclientes.model.OrdenVenta;
 import com.alliax.portalclientes.model.Pedido;
 import com.alliax.portalclientes.model.PedidoMaterial;
 import com.alliax.portalclientes.model.PedidoPartidas;
@@ -33,7 +36,10 @@ import org.apache.log4j.Logger;
 
 import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
+import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.ViewScoped;
+
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -43,6 +49,9 @@ import java.util.List;
 public class CrearPedido_backing extends AbstractBackingGen {
 
     private final static Logger logger = Logger.getLogger(CrearPedido_backing.class);
+    
+    @ManagedProperty("#{listaPedidos}")
+	private ListadoPedidos_backing listadoPedidos_backing;
 
     BuscarDestinatariosMercanciasRFC buscarDestinatariosMercanciasRFC;
     BuscarClasePedidoRFC buscarClasePedidoRFC;
@@ -106,9 +115,27 @@ public class CrearPedido_backing extends AbstractBackingGen {
     private String descripcionDestinatario;
 
     private String skuMaterialEliminado;
+    
+    private boolean update = false;
+    private OrdenVenta pedidoAClonar;
 
+    public ListadoPedidos_backing getListadoPedidos_backing() {
+		return listadoPedidos_backing;
+	}
 
-    public String getIdPedido() {
+	public void setListadoPedidos_backing(ListadoPedidos_backing listadoPedidos_backing) {
+		this.listadoPedidos_backing = listadoPedidos_backing;
+	}
+
+	public boolean isUpdate() {
+		return update;
+	}
+
+	public void setUpdate(boolean update) {
+		this.update = update;
+	}
+
+	public String getIdPedido() {
         return idPedido;
     }
 
@@ -946,4 +973,129 @@ public class CrearPedido_backing extends AbstractBackingGen {
         }
         setMaterialesJson(materiales);
     }
+    
+    public void loadDataClonarPedido(){
+    	
+    	this.setDestinatarioMercancia(pedidoAClonar.getDestinatario());
+    	this.setNroPedidoCliente(pedidoAClonar.getPedidoCliente());
+    	this.setSegmento(pedidoAClonar.getSegmento());
+        setDescripcionDestinatario(pedidoAClonar.getDestinatario()); 
+        setDestinatarioAndNroPedido();
+        logger.info("load MATERIALES");
+        setMateriales(loadMaterialesClonarPedido());
+    	asignaPedidoSegmentoClonar();
+    	getMaterialSeleccionadoJson();
+    	asignaPedidoMaterial();
+    	setMaterialesJson(getMateriales());
+
+    	/*
+    	UsoCFDI usoCFDI = null;
+        logger.info("load CFDI");
+        try{
+            usoCfdiRFC = this.getSpringContext().getBean("usoCfdiRFC", UsoCfdiRFC.class);
+            usoCFDI = ((UsoCfdiRFC) usoCfdiRFC).usoCFDI();
+            if(!"0".equals(usoCFDI.getResultCode())){}else{
+                setUsoCFDIDetalles(usoCFDI.getDetalles());
+                ObjectMapper objectMapper = new ObjectMapper();
+                setUsoCFDIDetallesJson(objectMapper.writeValueAsString(getUsoCFDIDetalles()));
+            }
+        }catch (Exception e){
+            logger.error(e);
+        }
+        
+        
+        logger.info("METODO");
+        MetodoPagoCFDI metodoPagoCFDI = null;
+        try{
+            buscarMetodoPagoCfdiRFC = this.getSpringContext().getBean("buscarMetodoPagoCfdiRDC", BuscarMetodoPagoCfdiRFC.class);
+            metodoPagoCFDI =  buscarMetodoPagoCfdiRFC.buscarMetodoPagoCFDI(this.getUsuarioLogueado().getNoCliente());
+
+            if(!"0".equals(metodoPagoCFDI.getResultCode())){}else{
+                setMetodoPago(metodoPagoCFDI.getClaveMetodoPago());
+            }
+        }catch (Exception e){
+            logger.error(e);
+        }
+        */
+    	//}
+    	
+}
+
+public List<PedidoMaterial> loadMaterialesClonarPedido() {
+	List<PedidoMaterial> out = new ArrayList<PedidoMaterial>();
+	List<Item> partidas = getListadoPedidos_backing().getPartidas();
+	for(int i = 0;i < partidas.size(); i++ ){
+		Item fac = partidas.get(i);
+		PedidoMaterial material = new PedidoMaterial();
+		material.setCantidad(fac.getCantidad()!=null?fac.getCantidad().toString():null);
+		material.setDescripcion(fac.getDescripcion());
+		SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy");  
+		material.setFechaEntrega(fac.getFechaEntrega()!=null?formatter.format(fac.getFechaEntrega()):null);
+		material.setMoneda(fac.getMoneda());
+		material.setPrecioNeto(fac.getPrecioNeto()!=null?fac.getPrecioNeto().toString():null);
+		material.setSku(fac.getNoMaterial());
+		material.setUnidadMedida(fac.getUnidadMedida());
+		material.setCodigoError("0");
+		material.setMensajeError("");
+		material.setMonto(fac.getMonto()!=null?fac.getMonto().toString():null);
+		material.setUrlFoto("");
+		material.setIva("5");
+		out.add(material);
+	}
+	return out;
+}
+
+public void loadDestinatariosAll() {
+	if(destinatarioMercancias ==null) {
+	pedidoAClonar = getListadoPedidos_backing().getPedido();
+	List<DestinatarioMercancia> auxDestinatariosMecancias = new ArrayList<DestinatarioMercancia>();
+	BuscarDestinatarioMercanciaPorPedidoRFC buscarDestinatarioMercanciaPorPedidoRFC;
+	  try {
+		  buscarDestinatarioMercanciaPorPedidoRFC = this.getSpringContext().getBean("buscarDestinatarioMercanciaPorPedidoRFC", BuscarDestinatarioMercanciaPorPedidoRFC.class);
+          logger.info("RFC " + buscarDestinatarioMercanciaPorPedidoRFC);
+          DestinatarioMercancia destinatarioMaterial = buscarDestinatarioMercanciaPorPedidoRFC.buscarDestinatarioMercanciaPorPedido(pedidoAClonar.getDocumentoComercial());
+          setDestinatarioMercancia(destinatarioMaterial.getNoDestinatario());
+          auxDestinatariosMecancias.add(destinatarioMaterial);
+      } catch (Exception e) {
+          logger.error("Error al buscar buscarDestinatarioMercanciaPorPedidoRFC,  doc comercial: " +pedidoAClonar.getDocumentoComercial() + " - " + e.getLocalizedMessage());
+          logger.error(e);
+      }
+	  List<DestinatarioMercancia> temp = getDestinatarioMercancias();
+	  for(int i = 0; i < temp.size() ; i++){
+		  DestinatarioMercancia tempDest = temp.get(i);
+		  if(!auxDestinatariosMecancias.contains(tempDest)) {
+			  auxDestinatariosMecancias.add(tempDest);
+		  }
+	  }
+	  setDestinatarioMercancias(auxDestinatariosMecancias);
+	}
+}
+
+
+public void asignaPedidoSegmentoClonar(){   //Materiales del pedido original + posibles materiales en dependencia del segmento
+    logger.info("asignaPedidoSegmentoClonar::::::" + getSegmento() );
+    pedidoService = this.getSpringContext().getBean("pedidoService",PedidoService.class);
+    if(getSegmento() != null){
+    	if(pedidoBd==null) {
+    		pedidoBd = new com.alliax.portalclientes.domain.Pedido();
+    	}
+        pedidoBd.setTipoMaterial(getSegmento());
+        pedidoService.save(pedidoBd);
+    }
+
+    materialService = this.getSpringContext().getBean("materialService",MaterialService.class);
+    List<Material> materialesDb = materialService.findByTipoMaterial(getSegmento());
+    Material material = null;
+    PedidoMaterial pedidoMaterial = null;
+
+    for(int i = 0; i < materialesDb.size() ; i++){
+        material = materialesDb.get(i);
+        	pedidoMaterial = new PedidoMaterial();
+            pedidoMaterial.setDescripcion(material.getDescripcion()==null?"":material.getDescripcion().trim());
+            pedidoMaterial.setSku(material.getSku()==null?"":material.getSku().trim());
+            pedidoMaterial.setUnidadMedida(material.getUnidadMedida()==null?"":material.getUnidadMedida().trim());
+            pedidoMaterial.setUrlFoto(material.getUrlFoto()==null?"":material.getUrlFoto().trim());
+            materiales.add(pedidoMaterial);
+    }
+}
 }

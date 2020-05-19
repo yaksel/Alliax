@@ -45,6 +45,15 @@ var crearPedido = (function () {
             $("[id='crearPedido:filterStepOne:frm_nroPedido']").val($("[id='crearPedido:filterStepOne:input_numeroPedido']").val());
 
             $("[id='crearPedido:filterStepOne:asignaDestNroPedido']").trigger('click');
+            
+            var flagUpdate = $("[id='crearPedido:filterStepOne:flagUpdate']").val();
+            if(flagUpdate=='true'){
+                //$("[id='crearPedido:filterStepOne:asignaSegmento']").trigger('click');
+                //$("[id='crearPedido:filterStepOne:asignaMaterial']").trigger('click');
+            	//$('div.continuarDestinatarioNroPedido').trigger('click');
+                //$('div.material_seleccionado').trigger('click');
+                $("[id='crearPedido:filterStepOne:clonarclonar']").trigger('click');
+            }
 
         });
 
